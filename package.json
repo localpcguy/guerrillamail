@@ -1,7 +1,7 @@
 {
 	"name": "guerrillamail",
 	"description": "Inbox manager for Guerrillamail.com API",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"author" : "Zachary Boyd <zacharyboyd@znetstar.net>",
 	"dependencies": {
 		"async": "^0.9.0",
