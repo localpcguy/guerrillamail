@@ -1,0 +1,13 @@
+{
+	"name": "guerrillamail",
+	"description": "Creates email addresses using guerrillamail",
+	"version": "0.0.1",
+	"author" : "Zachary Boyd",
+	"dependencies": {
+		"coffee-script": "*",
+		"async": "*",
+		"lodash": "*",
+		"request":"*"
+	},
+	"main": "index.js"
+}
