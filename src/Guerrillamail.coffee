@@ -65,12 +65,13 @@ class Guerrillamail extends EventEmitter
 		@.on 'set_email_user', new_address
 
 		parse_messages = (data) =>
+			@out.pause()
 			async.mapSeries data.list,(_message, $next) =>
+				@seq = _message.mail_id
 				envelope = new Envelope @, _message
 				envelope.get (e, envelope) =>
 					envelope.Mailbox.emit('message', envelope)
-					@seq = envelope.message.mail_id
-
+					
 					async.each (Object.keys(envelope.message)), (key, _next) =>
 						if key.indexOf('mail_') isnt -1
 							envelope.Mailbox.emit (key.replace('mail_', '')) + ':' + envelope.message[key], envelope.message
@@ -79,6 +80,7 @@ class Guerrillamail extends EventEmitter
 					,(e) =>
 						$next e, envelope
 			,(error, mailbox) =>
+				@out.resume()
 				@emit 'refresh', mailbox
 				@mailbox = mailbox
 
