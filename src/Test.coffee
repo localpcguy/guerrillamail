@@ -17,9 +17,8 @@ mailbox.on 'email_addr', (email_address) =>
 
 # This event fires everytime a message comes in
 mailbox.on 'message', (envelope) =>
-	console.log envelope.message
+	mailbox.destory()
 
 # Filters can be set on all of the 'mail_' fields
 mailbox.on 'from:filter-can-be-set-here@example.com', (envelope) =>
 	console.log envelope.message
-

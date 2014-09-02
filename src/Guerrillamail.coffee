@@ -7,11 +7,11 @@ _ = require 'lodash'
 uuid = require 'uuid'
 
 class Guerrillamail extends EventEmitter
-	constructor: (email_addr = null, request_defaults = {}, @refresh_rate = 10000, @user_agent = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36') ->
+	constructor: (email_addr = null, request_defaults = {}, @refresh_rate = 1000, @user_agent = 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36') ->
 		@cookies = require('request').jar()
 		request_defaults = _.extend request_defaults, ({ headers: { 'User-Agent': @user_agent } })
 
-		request = request.defaults(request_defaults)
+		request = require('request').defaults(request_defaults)
 
 		@out = async.queue (item, next) =>
 			defaults =
@@ -29,7 +29,7 @@ class Guerrillamail extends EventEmitter
 				defaults.seq = @seq
 
 			item.qs = _.extend item.qs, defaults
-			winston.debug('Guerrillamail[' + item.method + '] => ' + (JSON.stringify item.qs))
+			winston.info('Guerrillamail[' + item.method + '] => ' + (JSON.stringify item.qs))
 
 			request
 				jar: @cookies
@@ -41,31 +41,22 @@ class Guerrillamail extends EventEmitter
 
 		@out.pause()
 
-		request
-			url: 'http://monip.org'
-		,(e,r,b) =>
-			if e 
-				@emit 'error', e
-			else
-				@ip = b.split('IP : ').pop().split('<').shift().trim()
-				@out.resume()
-
 		new_address = (data) =>
 			@email_addr = data.email_addr
 			@emit 'email_addr', @email_addr
 			@get_email_list()
+
 			if @interval_lock
 				clearInterval @interval_lock
 
-			@interval_lock = setInterval(() =>
-				@check_email()
-			,@refresh_rate)
+			@interval_lock = setInterval((self) =>
+				self.check_email()
+			,@refresh_rate, @)
 
 		@.on 'get_email_address', new_address
 		@.on 'set_email_user', new_address
 
 		parse_messages = (data) =>
-			@out.pause()
 			async.mapSeries data.list,(_message, $next) =>
 				@seq = _message.mail_id
 				envelope = new Envelope @, _message
@@ -80,7 +71,6 @@ class Guerrillamail extends EventEmitter
 					,(e) =>
 						$next e, envelope
 			,(error, mailbox) =>
-				@out.resume()
 				@emit 'refresh', mailbox
 				@mailbox = mailbox
 
@@ -94,6 +84,21 @@ class Guerrillamail extends EventEmitter
 				@set_email_user email_addr
 		
 		@get_email_address()
+
+		request
+			url: 'http://monip.org'
+		,(e,r,b) =>
+			if e 
+				@emit 'error', e
+			else
+				@ip = b.split('IP : ').pop().split('<').shift().trim()
+				@out.resume()
+
+	destory: () ->
+		if @interval_lock
+			clearInterval @interval_lock
+			@check_email = () ->
+
 
 	build_request: (fn, qs, callback, method = "GET", body = null, do_emit = true) -> 
 		@out.push
@@ -127,6 +132,7 @@ class Guerrillamail extends EventEmitter
 		@build_request 'set_email_user', { email_user: email_user, lang: lang }, callback
 
 	check_email: (callback) ->
+		@seq = @seq or 1
 		@build_request 'check_email', {  }, callback
 
 	get_email_list: (callback, offset = 0) ->
